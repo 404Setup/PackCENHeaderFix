@@ -9,7 +9,6 @@ import net.minecraft.server.packs.PackResources;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.resources.IoSupplier;
 import one.pkg.pchf.shared.api.MoreFormatAPI;
-import one.pkg.pchf.shared.api.VanillaRPAPI;
 import one.pkg.pchf.shared.util.SharedZipFileAccess;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipFile;
@@ -19,9 +18,9 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -30,28 +29,21 @@ import java.util.Enumeration;
 import java.util.Set;
 
 @Mixin(FilePackResources.class)
-public abstract class FilePackResourcesMixin extends AbstractPackResources implements VanillaRPAPI {
+public abstract class FilePackResourcesMixin extends AbstractPackResources {
     @Final
     @Shadow
     static Logger LOGGER;
-    @Final
-    @Shadow
-    private FilePackResources.SharedZipFileAccess zipFileAccess;
+    @Unique
+    private SharedZipFileAccess sharedZipFileAccess;
 
     protected FilePackResourcesMixin(PackLocationInfo packLocationInfo) {
         super(packLocationInfo);
     }
 
-    @ModifyVariable(
-            method = "<init>",
-            at = @At("HEAD"),
-            ordinal = 0,
-            argsOnly = true
-    )
-    private static FilePackResources.SharedZipFileAccess modifyZipFileAccess(FilePackResources.SharedZipFileAccess original) {
-        if (original instanceof SharedZipFileAccess) return original;
-
-        return SharedZipFileAccess.access(original.file);
+    @Inject(method = "<init>", at = @At("RETURN"))
+    private void setInit(PackLocationInfo location, FilePackResources.SharedZipFileAccess zipFileAccess, String prefix, CallbackInfo ci) {
+        sharedZipFileAccess = SharedZipFileAccess.access(zipFileAccess.file);
+        zipFileAccess.close();
     }
 
     @Shadow
@@ -59,31 +51,32 @@ public abstract class FilePackResourcesMixin extends AbstractPackResources imple
         return null;
     }
 
-    @Override
-    public SharedZipFileAccess getSharedZipFileAccess() {
-        return (SharedZipFileAccess) this.zipFileAccess;
-    }
-
     /**
      * @author 404
      * @reason Replaced with Apache common compression. Compatible with MorePackFormat.
      */
+    @Nullable
     @Overwrite
     private IoSupplier<InputStream> getResource(String resourcePath) {
-        ZipFile zipfile = getSharedZipFileAccess().getACZipFile();
+        ZipFile zipfile = sharedZipFileAccess.getZipFile();
         if (zipfile == null) {
             return null;
         } else {
             ZipArchiveEntry zipentry = zipfile.getEntry(this.addPrefix(resourcePath));
             if (zipentry == null) return null;
-            MoreFormatAPI.getCompressed(getSharedZipFileAccess(), zipentry);
+            MoreFormatAPI.getCompressed(sharedZipFileAccess, zipentry);
             return () -> zipfile.getInputStream(zipentry);
         }
     }
 
+    @Inject(method = "close", at = @At("RETURN"))
+    private void pchf$close(CallbackInfo ci) {
+        sharedZipFileAccess.close();
+    }
+
     @Inject(method = "getNamespaces", at = @At("HEAD"), cancellable = true)
-    private void vrkmod$getNamespaces(PackType type, CallbackInfoReturnable<Set<String>> cir) {
-        @Nullable ZipFile zipfile = getSharedZipFileAccess().getACZipFile();
+    private void pchf$getNamespaces(PackType type, CallbackInfoReturnable<Set<String>> cir) {
+        @Nullable ZipFile zipfile = sharedZipFileAccess.getZipFile();
         if (zipfile == null) {
             cir.setReturnValue(Set.of());
         } else {
@@ -93,7 +86,7 @@ public abstract class FilePackResourcesMixin extends AbstractPackResources imple
 
             while (enumeration.hasMoreElements()) {
                 ZipArchiveEntry zipentry = enumeration.nextElement();
-                MoreFormatAPI.getCompressed(getSharedZipFileAccess(), zipentry);
+                MoreFormatAPI.getCompressed(sharedZipFileAccess, zipentry);
                 String s1 = zipentry.getName();
                 String s2 = FilePackResources.extractNamespace(s, s1);
                 if (!s2.isEmpty()) {
@@ -102,7 +95,7 @@ public abstract class FilePackResourcesMixin extends AbstractPackResources imple
                     } else {
                         LOGGER.warn("Non [a-z0-9_.-] character in namespace {} in pack {}, ignoring",
                                 s2,
-                                this.zipFileAccess.file
+                                this.sharedZipFileAccess.file
                         );
                     }
                 }
@@ -113,8 +106,8 @@ public abstract class FilePackResourcesMixin extends AbstractPackResources imple
     }
 
     @Inject(method = "listResources", at = @At("HEAD"), cancellable = true)
-    private void vrkmod$listResources(PackType packType, String string, String string2, PackResources.ResourceOutput resourceOutput, CallbackInfo ci) {
-        @Nullable ZipFile zipFile = getSharedZipFileAccess().getACZipFile();
+    private void pchf$listResources(PackType packType, String string, String string2, PackResources.ResourceOutput resourceOutput, CallbackInfo ci) {
+        @Nullable ZipFile zipFile = sharedZipFileAccess.getZipFile();
         if (zipFile != null) {
             Enumeration<ZipArchiveEntry> enumeration = zipFile.getEntries();
             String var10001 = packType.getDirectory();
@@ -124,7 +117,7 @@ public abstract class FilePackResourcesMixin extends AbstractPackResources imple
             while (enumeration.hasMoreElements()) {
                 ZipArchiveEntry zipEntry = enumeration.nextElement();
                 if (!zipEntry.isDirectory()) {
-                    MoreFormatAPI.getCompressed(getSharedZipFileAccess(), zipEntry);
+                    MoreFormatAPI.getCompressed(sharedZipFileAccess, zipEntry);
                     String string5 = zipEntry.getName();
                     if (string5.startsWith(string4)) {
                         String string6 = string5.substring(string3.length());

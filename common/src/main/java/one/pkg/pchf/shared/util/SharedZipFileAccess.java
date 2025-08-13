@@ -1,6 +1,5 @@
 package one.pkg.pchf.shared.util;
 
-import net.minecraft.server.packs.FilePackResources;
 import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.Nullable;
@@ -10,14 +9,16 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 
-public class SharedZipFileAccess extends FilePackResources.SharedZipFileAccess {
+public class SharedZipFileAccess implements AutoCloseable {
     public static final Logger LOGGER = LoggerFactory.getLogger("SharedZipFileAccess");
+    public final File file;
     private final boolean zstd;
     private final boolean brotli;
-    private ZipFile vzipFile;
+    private boolean failedToLoad;
+    private ZipFile zipFile;
 
     protected SharedZipFileAccess(File file) {
-        super(file);
+        this.file = file;
         int supported = ZipTarget.isSupported(file.getName());
         this.zstd = supported == 1;
         this.brotli = supported == 2;
@@ -28,13 +29,13 @@ public class SharedZipFileAccess extends FilePackResources.SharedZipFileAccess {
     }
 
     @Nullable
-    public ZipFile getACZipFile() {
+    public ZipFile getZipFile() {
         if (this.failedToLoad) {
             return null;
         } else {
-            if (this.vzipFile == null) {
+            if (this.zipFile == null) {
                 try {
-                    this.vzipFile = ZipFile.builder().setFile(this.file).get();
+                    this.zipFile = ZipFile.builder().setFile(this.file).get();
                 } catch (IOException iOException) {
                     LOGGER.error("Failed to open pack {}", this.file, iOException);
                     this.failedToLoad = true;
@@ -42,17 +43,16 @@ public class SharedZipFileAccess extends FilePackResources.SharedZipFileAccess {
                 }
             }
 
-            return this.vzipFile;
+            return this.zipFile;
         }
     }
 
     @Override
     public void close() {
-        if (this.vzipFile != null) {
-            IOUtils.closeQuietly(this.vzipFile);
-            this.vzipFile = null;
+        if (this.zipFile != null) {
+            IOUtils.closeQuietly(this.zipFile);
+            this.zipFile = null;
         }
-        super.close();
     }
 
     public boolean isBrotli() {
