@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${version}",
+  "name": "${mod_name}",
+  "description": "${description}",
+  "authors": [
+    "404"
+  ],
+  "contact": {
+    "homepage": "${homepage_url}",
+    "issues": "${issues_url}"
+  },
+  "license": "${license}",
+  "icon": "assets/pchf/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "one.pkg.pchf.mod.ModMain"
+    ],
+    "client": [
+    ]
+  },
+  "mixins": [
+    "${mod_id}.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${fabric_loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${fabric_game_version_range}",
+    "java": ">=${java_version}"
+  }
+}
