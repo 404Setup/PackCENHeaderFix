@@ -1,8 +1,8 @@
 {
   "homepage": "https://www.curseforge.com/minecraft/mc-mods/pack-cen-header-fix",
-  "json_url": "https://mvnc.pkg.one/update/mod/pchf/forge_update.json",
+  "json_url": "https://mvnc.pkg.one/update/mod/pack-cen-header-fix/forge_update.json",
   "promos": {
-    "1.21.8-latest": "0.0.2+1.21.8",
-    "1.21.8-recommended": "0.0.2+1.21.8"
+    "1.21.8-latest": "0.0.3+1.21.8",
+    "1.21.8-recommended": "0.0.3+1.21.8"
   }
 }
