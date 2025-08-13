@@ -1,7 +1,7 @@
 {
   "required": true,
   "package": "one.pkg.pchf.shared.mixin",
-  "refmap": "more_pack_format.refmap.json",
+  "refmap": "pchf.refmap.json",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "FilePackResourcesMixin"
