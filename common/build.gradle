@@ -10,15 +10,15 @@ neoForge {
     if (at.exists()) {
         accessTransformers.from(at.absolutePath)
     }
-    parchment {
+    /*parchment {
         minecraftVersion = parchment_minecraft
         mappingsVersion = parchment_version
-    }
+    }*/
 }
 
 dependencies {
     compileOnly("org.spongepowered:mixin:0.8.7")
-    compileOnly("org.ow2.asm:asm-tree:9.6")
+    compileOnly("org.ow2.asm:asm-tree:9.8")
     // fabric and neoforge both bundle mixinextras, so it is safe to use it in common
     compileOnly("io.github.llamalad7:mixinextras-common:0.3.5")
     annotationProcessor("io.github.llamalad7:mixinextras-common:0.3.5")

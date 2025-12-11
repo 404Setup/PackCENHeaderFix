@@ -1,12 +1,8 @@
 package one.pkg.pchf.shared.mixin;
 
 import com.google.common.collect.Sets;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.AbstractPackResources;
-import net.minecraft.server.packs.FilePackResources;
-import net.minecraft.server.packs.PackLocationInfo;
-import net.minecraft.server.packs.PackResources;
-import net.minecraft.server.packs.PackType;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.*;
 import net.minecraft.server.packs.resources.IoSupplier;
 import one.pkg.pchf.shared.api.MoreFormatAPI;
 import one.pkg.pchf.shared.util.SharedZipFileAccess;
@@ -14,11 +10,7 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
-import org.spongepowered.asm.mixin.Final;
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
-import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -90,7 +82,7 @@ public abstract class FilePackResourcesMixin extends AbstractPackResources {
                 String s1 = zipentry.getName();
                 String s2 = FilePackResources.extractNamespace(s, s1);
                 if (!s2.isEmpty()) {
-                    if (ResourceLocation.isValidNamespace(s2)) {
+                    if (Identifier.isValidNamespace(s2)) {
                         set.add(s2);
                     } else {
                         LOGGER.warn("Non [a-z0-9_.-] character in namespace {} in pack {}, ignoring",
@@ -121,9 +113,9 @@ public abstract class FilePackResourcesMixin extends AbstractPackResources {
                     String string5 = zipEntry.getName();
                     if (string5.startsWith(string4)) {
                         String string6 = string5.substring(string3.length());
-                        ResourceLocation resourceLocation = ResourceLocation.tryBuild(string, string6);
-                        if (resourceLocation != null) {
-                            resourceOutput.accept(resourceLocation, () -> zipFile.getInputStream(zipEntry));
+                        Identifier identifier = Identifier.tryBuild(string, string6);
+                        if (identifier != null) {
+                            resourceOutput.accept(identifier, () -> zipFile.getInputStream(zipEntry));
                         } else {
                             LOGGER.warn("Invalid path in datapack: {}:{}, ignoring", string, string6);
                         }
