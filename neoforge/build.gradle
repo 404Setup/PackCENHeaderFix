@@ -4,6 +4,7 @@ plugins {
 }
 
 dependencies {
+    //implementation("one.pkg:jrZip:1.0.1")
 }
 
 neoForge {

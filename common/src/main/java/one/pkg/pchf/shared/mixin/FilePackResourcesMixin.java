@@ -24,7 +24,7 @@ import java.util.Set;
 public abstract class FilePackResourcesMixin extends AbstractPackResources {
     @Final
     @Shadow
-    static Logger LOGGER;
+    private static Logger LOGGER;
     @Unique
     private SharedZipFileAccess sharedZipFileAccess;
 
@@ -39,7 +39,7 @@ public abstract class FilePackResourcesMixin extends AbstractPackResources {
     }
 
     @Shadow
-    private String addPrefix(String string) {
+    private String addPrefix(String path) {
         return null;
     }
 
@@ -51,10 +51,12 @@ public abstract class FilePackResourcesMixin extends AbstractPackResources {
     @Overwrite
     private IoSupplier<InputStream> getResource(String resourcePath) {
         ZipFile zipfile = sharedZipFileAccess.getZipFile();
+        //@Nullable JRZip zipfile = sharedZipFileAccess.getZipFile();
         if (zipfile == null) {
             return null;
         } else {
             ZipArchiveEntry zipentry = zipfile.getEntry(this.addPrefix(resourcePath));
+            //JRZip.JrZipEntry zipentry = zipfile.getEntry(this.addPrefix(resourcePath));
             if (zipentry == null) return null;
             MoreFormatAPI.getCompressed(sharedZipFileAccess, zipentry);
             return () -> zipfile.getInputStream(zipentry);
@@ -69,55 +71,62 @@ public abstract class FilePackResourcesMixin extends AbstractPackResources {
     @Inject(method = "getNamespaces", at = @At("HEAD"), cancellable = true)
     private void pchf$getNamespaces(PackType type, CallbackInfoReturnable<Set<String>> cir) {
         @Nullable ZipFile zipfile = sharedZipFileAccess.getZipFile();
+
+        //@Nullable JRZip zipfile = sharedZipFileAccess.getZipFile();
         if (zipfile == null) {
             cir.setReturnValue(Set.of());
         } else {
-            Enumeration<ZipArchiveEntry> enumeration = zipfile.getEntries();
-            Set<String> set = Sets.newHashSet();
-            String s = this.addPrefix(type.getDirectory() + "/");
+            Enumeration<ZipArchiveEntry> entries = zipfile.getEntries();
 
-            while (enumeration.hasMoreElements()) {
-                ZipArchiveEntry zipentry = enumeration.nextElement();
-                MoreFormatAPI.getCompressed(sharedZipFileAccess, zipentry);
-                String s1 = zipentry.getName();
-                String s2 = FilePackResources.extractNamespace(s, s1);
-                if (!s2.isEmpty()) {
-                    if (Identifier.isValidNamespace(s2)) {
-                        set.add(s2);
+            //Enumeration<? extends JRZip.JrZipEntry> entries = zipfile.entries();
+            Set<String> namespaces = Sets.newHashSet();
+            String typePrefix = this.addPrefix(type.getDirectory() + "/");
+
+            while (entries.hasMoreElements()) {
+                ZipArchiveEntry zipEntry = entries.nextElement();
+                //JRZip.JrZipEntry zipEntry = entries.nextElement();
+                MoreFormatAPI.getCompressed(sharedZipFileAccess, zipEntry);
+                String name = zipEntry.getName();
+                //String name = zipEntry.name();
+                String namespace = FilePackResources.extractNamespace(typePrefix, name);
+                if (!namespace.isEmpty()) {
+                    if (Identifier.isValidNamespace(namespace)) {
+                        namespaces.add(namespace);
                     } else {
-                        LOGGER.warn("Non [a-z0-9_.-] character in namespace {} in pack {}, ignoring",
-                                s2,
-                                this.sharedZipFileAccess.file
-                        );
+                        LOGGER.warn("Non {} character in namespace {} in pack {}, ignoring", "[a-z0-9_.-]", namespace, this.sharedZipFileAccess.file);
                     }
                 }
             }
 
-            cir.setReturnValue(set);
+            cir.setReturnValue(namespaces);
         }
     }
 
     @Inject(method = "listResources", at = @At("HEAD"), cancellable = true)
-    private void pchf$listResources(PackType packType, String string, String string2, PackResources.ResourceOutput resourceOutput, CallbackInfo ci) {
+    private void pchf$listResources(PackType type, String namespace, String directory, PackResources.ResourceOutput output, CallbackInfo ci) {
         @Nullable ZipFile zipFile = sharedZipFileAccess.getZipFile();
+        //@Nullable JRZip zipFile = sharedZipFileAccess.getZipFile();
         if (zipFile != null) {
             Enumeration<ZipArchiveEntry> enumeration = zipFile.getEntries();
-            String var10001 = packType.getDirectory();
-            String string3 = this.addPrefix(var10001 + "/" + string + "/");
-            String string4 = string3 + string2 + "/";
+            //Enumeration<? extends JRZip.JrZipEntry> enumeration = zipFile.entries();
+            String var10001 = type.getDirectory();
+            String root = this.addPrefix(var10001 + "/" + namespace + "/");
+            String prefix = root + directory + "/";
 
             while (enumeration.hasMoreElements()) {
                 ZipArchiveEntry zipEntry = enumeration.nextElement();
+                //JRZip.JrZipEntry zipEntry = enumeration.nextElement();
                 if (!zipEntry.isDirectory()) {
                     MoreFormatAPI.getCompressed(sharedZipFileAccess, zipEntry);
-                    String string5 = zipEntry.getName();
-                    if (string5.startsWith(string4)) {
-                        String string6 = string5.substring(string3.length());
-                        Identifier identifier = Identifier.tryBuild(string, string6);
-                        if (identifier != null) {
-                            resourceOutput.accept(identifier, () -> zipFile.getInputStream(zipEntry));
+                    String name = zipEntry.getName();
+                    //String name = zipEntry.name();
+                    if (name.startsWith(prefix)) {
+                        String path = name.substring(root.length());
+                        Identifier id = Identifier.tryBuild(namespace, path);
+                        if (id != null) {
+                            output.accept(id, () -> zipFile.getInputStream(zipEntry));
                         } else {
-                            LOGGER.warn("Invalid path in datapack: {}:{}, ignoring", string, string6);
+                            LOGGER.warn("Invalid path in datapack: {}:{}, ignoring", namespace, path);
                         }
                     }
                 }

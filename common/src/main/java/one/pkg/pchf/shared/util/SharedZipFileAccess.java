@@ -1,5 +1,7 @@
 package one.pkg.pchf.shared.util;
 
+//import one.pkg.jrzip.JRZip;
+
 import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.Nullable;
@@ -15,6 +17,7 @@ public class SharedZipFileAccess implements AutoCloseable {
     private final boolean zstd;
     private final boolean brotli;
     private boolean failedToLoad;
+    //private JRZip zipFile;
     private ZipFile zipFile;
 
     protected SharedZipFileAccess(File file) {
@@ -29,6 +32,7 @@ public class SharedZipFileAccess implements AutoCloseable {
     }
 
     @Nullable
+    //public JRZip getZipFile() {
     public ZipFile getZipFile() {
         if (this.failedToLoad) {
             return null;
@@ -36,6 +40,7 @@ public class SharedZipFileAccess implements AutoCloseable {
             if (this.zipFile == null) {
                 try {
                     this.zipFile = ZipFile.builder().setFile(this.file).get();
+                    //this.zipFile = new JRZip(this.file.getAbsolutePath());
                 } catch (IOException iOException) {
                     LOGGER.error("Failed to open pack {}", this.file, iOException);
                     this.failedToLoad = true;

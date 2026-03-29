@@ -1,23 +1,26 @@
 plugins {
     id 'multiloader-loader'
-    id 'fabric-loom'
+    id 'net.fabricmc.fabric-loom'
 }
+
 dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
-    mappings loom.layered {
-        officialMojangMappings()
-    }
+    implementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
 
-    modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
+    //include implementation("one.pkg:jrZip:1.0.1")
 }
 
 loom {
     def aw = project(':common').file("src/main/resources/${mod_id}.accesswidener")
-    //if (aw.exists()) {
+    if (aw.exists()) {
         accessWidenerPath.set(aw)
-    //}
-    mixin {
-        defaultRefmapName.set("${mod_id}.refmap.json")
     }
+    //mixin {
+        //defaultRefmapName.set("${mod_id}.refmap.json")
+    //}
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
 }
